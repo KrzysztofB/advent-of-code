@@ -8,6 +8,15 @@ fun main() {
         return counters.mapIndexed{ index, counter -> counter +  change[index] }
     }
 
+
+    fun select(data:List<String>, position:Int, selector:(Int,Int)->Boolean, preferred: Char): List<String>{
+        if(data.size<2) return data
+        val parts = data.partition { it[position] == preferred }
+        return if (parts.first.size == parts.second.size) parts.first
+        else if (selector(parts.first.size, parts.second.size)) parts.first
+        else parts.second
+    }
+
     fun part1(input: Sequence<String>): Int {
         val oneCounts = input.fold(emptyList<Int>() to 0) { acc: Pair<List<Int>, Int>, line: String ->
             val change = parseLine(line)
@@ -22,6 +31,7 @@ fun main() {
 
         return gammaRateString.toInt(2)*epsilonRateString.toInt(2)
     }
+
 
     fun part2(input: List<String>): Int {
         var data1 = input
@@ -41,14 +51,6 @@ fun main() {
         return data1.getOrElse(0,{"0"}).toInt(2) * data2.getOrElse(0,{"0"}).toInt(2)
     }
 
-
-    fun select(data:List<String>, position:Int, selector:(Int,Int)->Boolean, preferred: Char): List<String>{
-        if(data.size<2) return data
-        val parts = data.partition { it[position] == preferred }
-        return if (parts.first.size == parts.second.size) parts.first
-        else if (selector(parts.first.size, parts.second.size)) parts.first
-        else parts.second
-    }
 
     // test if implementation meets criteria from the description, like:
     check(part1(readSequence("Day03_test")) == 198)
