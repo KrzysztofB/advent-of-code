@@ -1,21 +1,21 @@
-val ALL_SEGMENTS = setOfChars("ABCDEFG")
-fun mutableSegments(): MutableSet<Char> {
+private val ALL_SEGMENTS = setOfChars("ABCDEFG")
+private fun mutableSegments(): MutableSet<Char> {
     val s = mutableSetOf<Char>()
     s.addAll(ALL_SEGMENTS)
     return s
 }
 
-fun setOfStrings(chars: String): Set<String> {
+private fun setOfStrings(chars: String): Set<String> {
     return chars.split("").toSet()
 }
 
-fun setOfChars(chars: String): Set<Char> {
+private fun setOfChars(chars: String): Set<Char> {
     val charArray = chars.toCharArray().toTypedArray()
 
     return setOf(*charArray)
 }
 
-val digitSegments = mapOf<String, Set<Char>>(
+private val digitSegments = mapOf<String, Set<Char>>(
     "0" to setOfChars("ABCEFG"),
     "1" to setOfChars("CF"),
     "2" to setOfChars("ACDEG"),
@@ -28,7 +28,7 @@ val digitSegments = mapOf<String, Set<Char>>(
     "9" to setOfChars("ABCDFG")
 )
 
-val segmentCountPossibleDigits = digitSegments.toList().groupBy { it.second.size }
+private val segmentCountPossibleDigits = digitSegments.toList().groupBy { it.second.size }
 
 fun main() {
 
@@ -153,7 +153,7 @@ po znalezieniu segmentów można wygenerować nowe patterny?
 }
 
 
-class PatternDecoder(val pattern: Set<Char>, private val wireMapping: Map<Char, MutableSet<Char>>) {
+private class PatternDecoder(val pattern: Set<Char>, private val wireMapping: Map<Char, MutableSet<Char>>) {
     val possibleDigits = mutableSetOf<String>()
     val possibleSegments = mutableSetOf<Char>()
     val excludedSegments = mutableSetOf<Char>()
@@ -221,7 +221,7 @@ class PatternDecoder(val pattern: Set<Char>, private val wireMapping: Map<Char, 
     }
 }
 
-object MultiplePatternLogic {
+private object MultiplePatternLogic {
 
 
     private fun fiveSegmentsPossible25(decoders: List<PatternDecoder>): Boolean {

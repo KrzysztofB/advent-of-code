@@ -1,6 +1,6 @@
 fun main() {
 
-    fun loadTerrainAddBorders(input: List<String>): Array<IntArray> {
+    fun loadTerrain(input: List<String>): Array<IntArray> {
         val originalWidth = input[0].trim().length
         val width = originalWidth + 2
         val originalHeight = input.size
@@ -27,6 +27,10 @@ fun main() {
                 && value < terrain[row + 1][column]
     }
 
+    /**
+     * returns:
+     *   values which all 4 neighbours (horizontal & vertical) have greater value
+     */
     fun lowPoints(terrain: Array<IntArray>): List<Int> {
         val result = mutableListOf<Int>()
         for (row in 1..terrain.size - 2) {
@@ -37,7 +41,10 @@ fun main() {
         return result
     }
 
-
+    /**
+     * returns:
+     *   coordinates of lowValues ( which all 4 neighbours (horizontal & vertical) have greater value)
+     */
     fun lowPointsCoords(terrain: Array<IntArray>): List<Pair<Int, Int>> {
         val result = mutableListOf<Pair<Int, Int>>()
         for (row in 1..terrain.size - 2) {
@@ -49,11 +56,14 @@ fun main() {
     }
 
     fun part1(input: List<String>): Int {
-        val terrain = loadTerrainAddBorders(input)
+        val terrain = loadTerrain(input)
 
         return lowPoints(terrain).map { it + 1 }.sum()
     }
 
+    /**
+     * starting from lowValue find all points in this basin (below 9)
+     */
     fun basinSize(startCoord: Pair<Int, Int>, terrain: Array<IntArray>): Int {
         val basin = mutableSetOf<Pair<Int, Int>>()
         val toVisit = mutableSetOf<Pair<Int, Int>>()
@@ -85,7 +95,7 @@ fun main() {
     }
 
     fun part2(input: List<String>): Int {
-        val terrain = loadTerrainAddBorders(input)
+        val terrain = loadTerrain(input)
         val lowCoords = lowPointsCoords(terrain)
         return findBasins(lowCoords, terrain)
             .reduce { acc: Int, basinSize: Int -> acc * basinSize }
