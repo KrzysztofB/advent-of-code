@@ -35,7 +35,7 @@ fun main() {
     fun taskPatterns(line: String): List<String> = line.split("|")[1].trim().split(" ")
 
     fun countUniqueLength(patterns: List<String>): Int {
-        val uniqueLengths = setOf<Int>(2, 4, 3, 7)//panels in digits: 1,4,7,8
+        val uniqueLengths = setOf<Int>(2, 4, 3, 7)//lighted segment count in digits: 1,4,7,8
         val result = patterns
             .map { it.length }
             .filter { it in uniqueLengths }
@@ -135,7 +135,7 @@ po znalezieniu segmentów można wygenerować nowe patterny?
         } while (patternsReduced || digitsReduced || wiresReduced)
 
         val xx = outputPatterns.map { op -> decoders.firstOrNull { it.pattern == op } }
-            .map { if (it == null || it.possibleDigits.size != 1) "NULL" else "${it.possibleDigits.first()}" }
+            .map { if (it == null || it.possibleDigits.size != 1) "NULL" else it.possibleDigits.first() }
         val digitString = xx.joinToString(separator = "")
         return digitString.toInt()
     }
