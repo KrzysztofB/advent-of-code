@@ -1,5 +1,11 @@
 import kotlin.math.abs
 
+
+private fun manhattanDistance(b0:RBeacon, b1:RBeacon): Int {
+    val v =  Scanner.vectorAbs(b0,b1)
+    return v.first + v.second + v.third
+}
+
 fun main() {
 
     fun loadScanner(input: List<String>, startLine: Int): Scanner? {
@@ -35,9 +41,8 @@ fun main() {
     }
 
 
-
     fun oneStepMappings(scanners: List<Scanner>): MutableList<Mapping> {
-        var mappings = mutableListOf<Mapping>()
+        val mappings = mutableListOf<Mapping>()
         for (i in 0.until(scanners.size)) {  //0.until
             for (j in (i + 1).until(scanners.size)) { //(i + 1).until
                 val s0 = scanners[i]
@@ -45,83 +50,123 @@ fun main() {
 
                 val c = s0.common(s1)
                 val u = Scanner.uniqueDistances(c)
-                println("${s0.name} ${s1.name} ${c.size} ${u.size}")
+                //println("${s0.name} ${s1.name} ${c.size} ${u.size}")
                 if (c.size >= Scanner.MIN_COMMON_PAIRS) {
                     val mapping = s0.findMappingFrom(s1, u)
                     mappings.add(mapping)
-//                    val commonCount = s1.beacons.map {
-//                        mapping.calc(it)
-//                    }.filter {
-//                        s0.beacons.contains(it)
-//                    }.count()
-//                    println("common after mapping = $commonCount")
                 }
             }
         }
         return mappings
     }
 
-    fun prepareMappings (scanners: List<Scanner>){
-        val mappings = mutableMapOf<Pair<String,String>, Mapping>()
+    fun prepareMappings(scanners: List<Scanner>): MutableMap<Pair<String, String>, Mapping> {
+        val mappings = mutableMapOf<Pair<String, String>, Mapping>()
         val firstStep = oneStepMappings(scanners)
-        firstStep.forEach { mappings.put(it.nameTo to it.nameFrom, it)  }
+        firstStep.forEach { mappings.put(it.nameTo to it.nameFrom, it) }
         firstStep.forEach {
             val reverseKey = it.nameFrom to it.nameTo
             if (!mappings.containsKey(reverseKey)) {
                 mappings.put(reverseKey, it.reversed())
             }
         }
-        val pairsToFind = scanners.filter{ it.name != scanners[0].name }
+        val pairsToFind = scanners.filter { it.name != scanners[0].name }
             .map { scanners[0].name to it.name }
-        while(!mappings.keys.containsAll(pairsToFind)){
+            .toMutableList()
 
-
+        for (key in mappings.keys) {
+            pairsToFind.remove(key)
         }
 
+        do {
+            myloop@
+            for (k0 in mappings.keys) {
+                for (k1 in mappings.keys) {
+                    if (k0.second != k1.first) continue
+                    if (mappings.containsKey(k0.first to k1.second)) continue
+                    val m0 = mappings[k0]!!
+                    val m1 = mappings[k1]!!
 
-    }
-
-    fun composeMapping(nameTo: String, nameFrom: String, s: Scanner, mappings: MutableList<Mapping>) {
-        if(nameTo == nameFrom) return
-        val existing = mappings.firstOrNull{
-            ((it.nameTo == nameTo) && (it.nameFrom == nameFrom))
-                    || ((it.nameTo == nameFrom) && (it.nameFrom == nameTo))
-        }
-        if(existing!= null) {
-            return
-        }
-        //mapping doesn't exist yet... compose one
-        mappings.filter{ it.nameTo == nameTo || it.nameFrom == nameTo }
+                    val m =
+                        Mapping(
+                            m0.nameTo,
+                            m1.nameFrom,
+                            { beacon -> m1.calc(beacon).let { m0.calc(it) } },
+                            m0.v0,
+                            m1.v1,
+                            m0.b0,
+                            m1.b1
+                        )
+                    mappings.put(m0.nameTo to m1.nameFrom, m)
+//                    if (!mappings.containsKey(m1.nameFrom to m0.nameTo)) {
+//                        mappings.put(m1.nameFrom to m0.nameTo, m.reversed())
+//                    }
+                    pairsToFind.remove(m0.nameTo to m1.nameFrom)
+                    //pairsToFind.remove(m1.nameFrom to m0.nameTo)
+                    break@myloop
+                }
+            }
+        } while (pairsToFind.isNotEmpty())
+        return mappings
     }
 
     fun part1(input: List<String>): Int {
         val scanners = load(input)
 
-        val mappings = oneStepMappings(scanners)
         val zeroName = scanners[0].name
-        for(s in scanners){
-            composeMapping(zeroName, s.name, s, mappings)
+        val mappings = prepareMappings(scanners)
+        val beacons = mutableSetOf<RBeacon>()
+        for (s in scanners) {
+            if (s.name == zeroName) {
+                beacons.addAll(scanners[0].beacons)
+            } else {
+                val m = mappings[zeroName to s.name]!!//nazwa myląca :) lepiej s .name to zeroName
+                s.beacons.forEach { beacons.add(m.calc.invoke(it)) }
+            }
         }
 
-
-        return 0
+        return beacons.size
     }
+
 
     fun part2(input: List<String>): Int {
 
-        return 0
+        val scanners = load(input)
+
+        val zeroName = scanners[0].name
+        val mappings = prepareMappings(scanners)
+        val scannerLocation = RBeacon(0,0,0)
+        val scannerCoords = mutableListOf<RBeacon>()
+        for (s in scanners) {
+            if (s.name == zeroName) {
+                scannerCoords.add(scannerLocation)
+            }else {
+                val m = mappings[zeroName to s.name]!!//nazwa myląca :) lepiej s .name to zeroName
+                scannerCoords.add( m.calc.invoke(scannerLocation))
+            }
+        }
+
+        var maxDistance = 0
+        for (i in 0.until(scannerCoords.size)) {  //0.until
+            for (j in (i + 1).until(scannerCoords.size)) { //(i + 1).until
+                val d = manhattanDistance(scannerCoords[i], scannerCoords[j])
+                if(d> maxDistance) maxDistance = d
+            }
+        }
+        return maxDistance
     }
 
 
     // test if implementation meets criteria from the description, like:
-    check(part1(readInput("Day19_test")) == 40)
-//    check(part2(readInput("Day15_test")) == 315)
-//
-//    println(part1(readInput("Day15")))
-//    println(part2(readInput("Day15")))
+    check(part1(readInput("Day19_test")) == 79)
+    check(part2(readInput("Day19_test")) == 3621)
+
+
+    println(part1(readInput("Day19")))
+    println(part2(readInput("Day19")))
 }
 
-data class RBeacon(val x: Int, val y: Int, val z: Int) {
+private data class RBeacon(val x: Int, val y: Int, val z: Int) {
 
     companion object {
         fun from(line: String): RBeacon? {
@@ -137,7 +182,7 @@ data class RBeacon(val x: Int, val y: Int, val z: Int) {
 }
 
 
-class Scanner(val name: String, val beacons: List<RBeacon>) {
+private class Scanner(val name: String, val beacons: List<RBeacon>) {
     override fun toString(): String {
         val buf = StringBuilder()
         buf.append(name)
@@ -182,19 +227,12 @@ class Scanner(val name: String, val beacons: List<RBeacon>) {
         return (commonDistances)//.size)//< MIN_COMMON_PAIRS)
     }
 
-    fun vectorAbs(b0: RBeacon, b1: RBeacon) = Triple(
-        abs(b1.x - b0.x),
-        abs(b1.y - b0.y),
-        abs(b1.z - b0.z)
-    )
 
-    fun vector(b0: RBeacon, b1: RBeacon) = Triple(
-        (b1.x - b0.x),
-        (b1.y - b0.y),
-        (b1.z - b0.z)
-    )
-
-    private fun findMappingBy(s1: Scanner, uniqueDistance:Triple<Int, Int, Int>, uniques: Set<Triple<Int, Int, Int>>): Mapping {
+    private fun findMappingBy(
+        s1: Scanner,
+        uniqueDistance: Triple<Int, Int, Int>,
+        uniques: Set<Triple<Int, Int, Int>>
+    ): Mapping {
         val d0 = distances.first { it.dist == uniqueDistance }
         val d1 = s1.distances.first { it.dist == uniqueDistance }
         val v0abs = vectorAbs(d0.b0, d0.b1)
@@ -209,14 +247,15 @@ class Scanner(val name: String, val beacons: List<RBeacon>) {
         //println("$v0 -> ${directionMapping(v1)} was $v1")
         val reversedD1 = directionMapping.third
         val b0MatchInS1 = if (reversedD1) d1.b1 else d1.b0
-        val completeMapping = Mapping.findTranslationMapping(d0.b0, b0MatchInS1, Pair(directionMapping.first, directionMapping.second))
+        val completeMapping =
+            Mapping.findTranslationMapping(d0.b0, b0MatchInS1, Pair(directionMapping.first, directionMapping.second))
 //        println(completeMapping.first)
 //        println("${d0.b0} -> ${completeMapping.second(b0MatchInS1)} was $b0MatchInS1")
 //
 //        val b1MatchInS1 = if (reversedD1) d1.b0 else d1.b1
 //        println("${d0.b1} -> ${completeMapping.second(b1MatchInS1)} was $b1MatchInS1")
 
-        val v1 = if(!reversedD1) vector(d1.b0, d1.b1) else vector(d1.b1, d1.b0)
+        val v1 = if (!reversedD1) vector(d1.b0, d1.b1) else vector(d1.b1, d1.b0)
         return Mapping(name, s1.name, completeMapping.second, v0, v1, d0.b0, b0MatchInS1)
     }
 
@@ -227,7 +266,7 @@ class Scanner(val name: String, val beacons: List<RBeacon>) {
                     && (it.second != it.third)
                     && (it.third != it.first))
         }.toSet()
-        println("---- ${name} ${s1.name} ----")
+        //println("---- ${name} ${s1.name} ----")
         val mappings = totalUnique.map { findMappingBy(s1, it, totalUnique) }
         return mappings[0]
     }
@@ -235,6 +274,19 @@ class Scanner(val name: String, val beacons: List<RBeacon>) {
 
     companion object {
         const val MIN_COMMON_PAIRS = 66 // (12 by 2)
+
+
+        fun vectorAbs(b0: RBeacon, b1: RBeacon) = Triple(
+            abs(b1.x - b0.x),
+            abs(b1.y - b0.y),
+            abs(b1.z - b0.z)
+        )
+
+        fun vector(b0: RBeacon, b1: RBeacon) = Triple(
+            (b1.x - b0.x),
+            (b1.y - b0.y),
+            (b1.z - b0.z)
+        )
 
         fun uniqueDistances(list: List<Triple<Int, Int, Int>>): List<Triple<Int, Int, Int>> {
             val unique = list.distinct()
@@ -246,27 +298,22 @@ class Scanner(val name: String, val beacons: List<RBeacon>) {
 
 }
 
-data class Distance(val dist: Triple<Int, Int, Int>, val b0: RBeacon, val b1: RBeacon)
+private data class Distance(val dist: Triple<Int, Int, Int>, val b0: RBeacon, val b1: RBeacon)
 
-class Mapping(
+private class Mapping(
     val nameTo: String, val nameFrom: String, val calc: (RBeacon) -> RBeacon,
     val v0: Triple<Int, Int, Int>, val v1: Triple<Int, Int, Int>,
     val b0: RBeacon, val b1: RBeacon
 ) {
 
-    fun handleFromTo(nFrom: String, nTo: String): Mapping? {
-        if (nameTo == nTo && nameFrom == nFrom) return this
-        if (nameTo == nFrom && nameFrom == nTo) return reversed()
-        return null
-    }
-
     fun reversed(): Mapping {
         val v0abs = v0.let { Triple(abs(it.first), abs(it.second), abs(it.third)) }
         val v1abs = v1.let { Triple(abs(it.first), abs(it.second), abs(it.third)) }
 
-        val axisMapping = Mapping.findAxisMapping(v1abs, v0abs)
-        val directionMapping = Mapping.findDirections(v1, v0, axisMapping)
-        val completeMapping = Mapping.findTranslationMapping(b1, b0, Pair(directionMapping.first, directionMapping.second))
+        val axisMapping = findAxisMapping(v1abs, v0abs)
+        val directionMapping = findDirections(v1, v0, axisMapping)
+        val completeMapping =
+            findTranslationMapping(b1, b0, Pair(directionMapping.first, directionMapping.second))
         return Mapping(nameFrom, nameTo, completeMapping.second, v1, v0, b1, b0)
     }
 
@@ -294,12 +341,14 @@ class Mapping(
             return "${fx.first},${fy.first},${fz.first}" to mapping
         }
 
-        val ROTATIONS = listOf("x,y,z", "y,-x,z", "-x,-y,z", "-y,x,z",
-        "x,-z,y", "x,-y,-z", "x,z,-y",
-        "z,y,-x", "-x,y,-z", "-z,y,x",
-        "y,-z,-x", "-x,-z, -y", "-y,-z,x",
-            "y,z,x", "-y,z,-x",
-            "y,x,-z", "-y,-x,-z").map { "($it)" }.toSet()
+        val ROTATIONS = listOf(
+            "x,y,z", "y,-x,z", "-x,-y,z", "-y,x,z",
+            "x,-z,y", "x,-y,-z", "x,z,-y", "-z,-x,y",
+            "z,y,-x", "-x,y,-z", "-z,y,x", "-z,-y,-x",
+            "y,-z,-x", "-x,-z, -y", "-y,-z,x", "z,x,y", "z,-y,x",
+            "y,z,x", "-y,z,-x", "-x,z,y", "-x,-z,-y",
+            "y,x,-z", "-y,-x,-z", "-z,x,-y", "z,-x,-y"
+        ).map { "($it)" }.toSet()
 
         /***
          * returns
@@ -310,7 +359,8 @@ class Mapping(
         fun findDirections(
             v0: Triple<Int, Int, Int>,
             v1: Triple<Int, Int, Int>,
-            axisMapping: Pair<String, (Triple<Int, Int, Int>) -> Triple<Int, Int, Int>>
+            axisMapping: Pair<String, (Triple<Int, Int, Int>) -> Triple<Int, Int, Int>>,
+            stopRecursion: Boolean = false
         ): Triple<String, (Triple<Int, Int, Int>) -> Triple<Int, Int, Int>, Boolean> {
             val v1Rotated = axisMapping.second(v1)
             fun selectFor(expected: Int, value: Int): Pair<String, (Int) -> Int> =
@@ -330,11 +380,15 @@ class Mapping(
             val description = axisMapping.first.split(",").chunked(3)
                 .map { "(${fx.first}${it[0]},${fy.first}${it[1]},${fz.first}${it[2]})" }
                 .first()
-            if(description !in ROTATIONS) {
-                //println("$description not in rotations")
-                return findDirections(v0,Triple(-v1.first, -v1.second,-v1.third ),axisMapping).let{
+            if (description !in ROTATIONS) {
+                if (stopRecursion) {
+                    //println("$description not in rotations")
+                    throw IllegalArgumentException("$description not in rotations")
+                }
+                return findDirections(v0, Triple(-v1.first, -v1.second, -v1.third), axisMapping, true).let {
                     Triple(it.first, it.second, !it.third)
                 }
+
             }
 
             return Triple(description, mapping, false)
@@ -345,18 +399,6 @@ class Mapping(
             b1: RBeacon,
             directionMapping: Pair<String, (Triple<Int, Int, Int>) -> Triple<Int, Int, Int>>
         ): Pair<String, (RBeacon) -> RBeacon> {
-//            val preparedB1 = directionMapping(
-//                b1.let { Triple(it.x, it.y, it.z) }
-//            ).let { RBeacon(it.first, it.second, it.third) }
-
-            //  value -> expected
-            //  value -> value - ( value - expected)
-//            fun selectFor(expected: Int, value: Int): (Int) -> Int =
-//                { it - (value - expected) }
-//
-//            val fx = selectFor(b0.x, preparedB1.x)
-//            val fy = selectFor(b0.y, preparedB1.y)
-//            val fz = selectFor(b0.z, preparedB1.z)
 
             fun signed(nnn: Int) = if (nnn >= 0) "+$nnn" else "$nnn"
 
@@ -368,20 +410,16 @@ class Mapping(
                 ).let {
                     Triple(it.first + b0.x, it.second + b0.y, it.third + b0.z)
                 }.let { RBeacon(it.first, it.second, it.third) }
-                //RBeacon(fx(preparedA.x), fy(preparedA.y), fz(preparedA.z))
             }
             val description =
                 "(x${signed(-b1.x)},y${signed(-b1.y)},z${signed(-b1.z)})\n${directionMapping.first}\n(x${signed(b0.x)},y${
                     signed(b0.y)
                 },z${signed(b0.z)})"
-//            val description =
-//                "${directionMapping.first}"
+
             return description to mapping
         }
 
     }
-
-
 }
 
 fun signPass(a: Int) = a
@@ -390,17 +428,3 @@ fun signChange(a: Int) = -a
 fun returnFirst(a: Triple<Int, Int, Int>) = a.first
 fun returnSecond(a: Triple<Int, Int, Int>) = a.second
 fun returnThird(a: Triple<Int, Int, Int>) = a.third
-
-/*
-scanner 0 scanner 1 66
-scanner 1 scanner 3 66
-scanner 1 scanner 4 66
-scanner 2 scanner 4 66
-------
-scanner 0 scanner 2 3
-scanner 0 scanner 3 0
-scanner 0 scanner 4 15
-scanner 1 scanner 2 15
-scanner 3 scanner 4 15
-scanner 2 scanner 3 3
- */
